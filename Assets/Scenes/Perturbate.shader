@@ -1,13 +1,13 @@
 Shader "Hidden/Perturbate" {
     Properties {
         _MainTex ("Texture", 2D) = "white" {}
-        _Sphere ("Sphere", Vector) = (0, 0, 0, 0)
     }
     SubShader {
         Cull Off ZWrite Off ZTest Always
 
         Pass {
             CGPROGRAM
+            #pragma target 5.0
             #pragma vertex vert
             #pragma fragment frag
 
@@ -35,15 +35,35 @@ Shader "Hidden/Perturbate" {
             }
 
             sampler2D _MainTex;
-            float4 _Sphere;
+            float4 _MainTex_TexelSize;
+            
+            float4 _Params0;
+            float4 _Params1;
             StructuredBuffer<Shape> _Shapes;
+            uint _Shapes_Len;
 
-            fixed4 frag (v2f i) : SV_Target {
+            float smooth_f(float x0, float x1, float x){
+                float s = smoothstep(x0, x1, x);
+                return s;
+            }
 
-                float aspect = _ScreenParams.x / _ScreenParams.y;
-                float dist = length((i.uv - _Sphere.xy) * float2(aspect, 1));
-                float v = smoothstep(_Sphere.z, 0, dist);
-                return float4(v, v, v, 1);
+            fixed4 frag (v2f IN) : SV_Target {
+                float2 aspect = float2(_MainTex_TexelSize.z / _MainTex_TexelSize.w, 1);
+                float2 aspect_inv = float2(1.0 / aspect.x, 1);
+
+                float v = 0;
+                for (uint i = 0; i < _Shapes_Len; i++) {
+                    Shape s = _Shapes[i];
+                    float dist = length((IN.uv - s.center) * aspect);
+                    v += smooth_f(_Params0.x, 0, dist);
+                }
+
+                float2 duv = float2(ddx_fine(v), -ddy_fine(v)) * aspect_inv;
+
+                float4 cmain = tex2D(_MainTex, IN.uv + duv * _Params0.z);
+                //float c = pattern(IN.uv + duv * _Params0.z);
+                //float4 cmain = float4(c,c,c,1);
+                return cmain;
             }
             ENDCG
         }
