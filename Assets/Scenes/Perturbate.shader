@@ -37,10 +37,10 @@ Shader "Hidden/Perturbate" {
             sampler2D _MainTex;
             float4 _MainTex_TexelSize;
             
+            sampler2D _PatternTex;
+            
             float4 _Params0;
             float4 _Params1;
-            StructuredBuffer<Shape> _Shapes;
-            uint _Shapes_Len;
 
             float smooth_f(float x0, float x1, float x){
                 float s = smoothstep(x0, x1, x);
@@ -51,19 +51,13 @@ Shader "Hidden/Perturbate" {
                 float2 aspect = float2(_MainTex_TexelSize.z / _MainTex_TexelSize.w, 1);
                 float2 aspect_inv = float2(1.0 / aspect.x, 1);
 
-                float v = 0;
-                for (uint i = 0; i < _Shapes_Len; i++) {
-                    Shape s = _Shapes[i];
-                    float dist = length((IN.uv - s.center) * aspect);
-                    v += smooth_f(_Params0.x, 0, dist);
-                }
+                float4 cmain = tex2D(_MainTex, IN.uv);
+                float2 duv = cmain.xy * aspect_inv;
 
-                float2 duv = float2(ddx_fine(v), -ddy_fine(v)) * aspect_inv;
-
-                float4 cmain = tex2D(_MainTex, IN.uv + duv * _Params0.z);
+                float4 cpattern = tex2D(_PatternTex, IN.uv + duv * _Params0.z);
                 //float c = pattern(IN.uv + duv * _Params0.z);
-                //float4 cmain = float4(c,c,c,1);
-                return cmain;
+                //float4 cpattern = float4(c,c,c,1);
+                return cpattern;
             }
             ENDCG
         }
