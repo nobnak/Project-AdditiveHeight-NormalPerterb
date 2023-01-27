@@ -55,7 +55,7 @@ namespace nobnak.Gist.Compute.Blurring {
             RenderTexture lastTmp = null;
             for (var l = 1; l <= lod; l++) {
                 var nextSize = LoD(size, l);
-                var nextTmp = CreateTempRT(nextSize);
+                var nextTmp = CreateTempRT(nextSize, dst.descriptor);
                 var next = nextTmp;
                 Render(last, next);
 
@@ -65,7 +65,7 @@ namespace nobnak.Gist.Compute.Blurring {
             }
 
             for (var i = 0; i < iterations; i++) {
-                var nextTmp = CreateTempRT(lodSize);
+                var nextTmp = CreateTempRT(lodSize, dst.descriptor);
                 var next = nextTmp;
                 Render(last, next);
 
@@ -92,22 +92,8 @@ namespace nobnak.Gist.Compute.Blurring {
             FindSize(flod, out iterations, out lod);
         }
 
-        public static RenderTexture CreateRT(Vector2Int lodSize) {
-            RenderTexture dst = new RenderTexture(lodSize.x, lodSize.y, 0, RenderTextureFormat.ARGBHalf);
-            dst.filterMode = FilterMode.Bilinear;
-            dst.wrapMode = TextureWrapMode.Clamp;
-            dst.enableRandomWrite = true;
-			dst.hideFlags = HideFlags.DontSave;
-            dst.Create();
-            return dst;
-        }
-        public static RenderTexture CreateRT(Texture src, int lod) {
-            var size = new Vector2Int(src.width, src.height);
-            var lodSize = LoD(size, lod);
-            return CreateRT(lodSize);
-        }
-        public static RenderTexture CreateTempRT(Vector2Int nextSize) {
-            var desc = new RenderTextureDescriptor(nextSize.x, nextSize.y, RenderTextureFormat.ARGBHalf, 0);
+        public static RenderTexture CreateTempRT(Vector2Int nextSize, RenderTextureDescriptor src_desc) {
+            var desc = new RenderTextureDescriptor(nextSize.x, nextSize.y, src_desc.graphicsFormat, 0);
             desc.enableRandomWrite = true;
 
             var nextTmp = RenderTexture.GetTemporary(desc);

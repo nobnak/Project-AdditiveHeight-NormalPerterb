@@ -40,15 +40,22 @@ public class Dots : MonoBehaviour {
         changed.Reset();
         changed.CheckValidity += () => math.all(attCam_size == attCam.Size());
         changed.OnValidate += () => {
-            attCam_size = attCam.Size();
+            var size = attCam.Size();
+            attCam_size = size;
             if (mat != null) {
+                mat.shaderKeywords = null;
+                if (tuner.shape != default)
+                    mat.EnableKeyword(tuner.shape.ToString());
+
                 mat.SetVector(P_Params0, new Vector4(
-                    math.min(tuner.dot_size, tuner.tile_size),
+                    math.min((float)tuner.dot_size / tuner.tile_size, tuner.tile_size),
                     tuner.tile_size,
                     0f,
                     0f));
 
-                dotsTex.Size = attCam.Size();
+                dotsTex.Size = size;
+
+                mat.SetVector(P_Destination_Size, new Vector4(size.x, size.y, 0, 0));
                 Graphics.Blit(null, dotsTex, mat);
             }
 
@@ -70,7 +77,13 @@ public class Dots : MonoBehaviour {
     #endregion
 
     #region declarations
+    public static readonly int P_Destination_Size = Shader.PropertyToID("_Destination_Size");
     public static readonly int P_Params0 = Shader.PropertyToID("_Params0");
+
+    public enum ShapeMode { 
+        SHAPE_QUAD = 0,
+        SHAPE_HEX
+    }
 
     [System.Serializable]
     public class Events {
@@ -81,6 +94,7 @@ public class Dots : MonoBehaviour {
     }
     [System.Serializable]
     public class Tuner {
+        public ShapeMode shape = default;
         public int dot_size = 1;
         public int tile_size = 3;
     }

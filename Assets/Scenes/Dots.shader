@@ -8,6 +8,7 @@ Shader "Hidden/Dots" {
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile ___ SHAPE_HEX
 
             #include "UnityCG.cginc"
 
@@ -28,15 +29,28 @@ Shader "Hidden/Dots" {
                 return o;
             }
 
+            float4 _Destination_Size;
             float4 _Params0;
 
             fixed4 frag (v2f i) : SV_Target {
-                float2 screen = _ScreenParams.xy;
+                float2 screen = _Destination_Size.xy;
 
                 float2 px = i.uv * screen;
-                float2 res_fmod = fmod(px, _Params0.y);
-                float2 res_step = step(res_fmod, _Params0.x);
+                float2 ip;
+                float2 fp = modf(px / _Params0.y, ip);
+
+                #if SHAPE_HEX
+                if ((ip.y % 2) == 0) {
+                    fp.x = frac(fp.x + 0.5);
+                }
+                float2 res_step = step(fp, _Params0.x);
                 float c = all(res_step) ? 1 : 0;
+
+                #else
+                float2 res_step = step(fp, _Params0.x);
+                float c = all(res_step) ? 1 : 0;
+                #endif
+
                 return float4(c, c, c, 1);
             }
             ENDCG
