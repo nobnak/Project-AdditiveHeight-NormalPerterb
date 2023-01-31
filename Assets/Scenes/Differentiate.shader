@@ -7,9 +7,10 @@ Shader "Hidden/Differentiate" {
 
         CGINCLUDE
             #pragma target 5.0
-            #pragma multi_compile ___ SRC_DEPTH
+            #pragma multi_compile ___ SRC_DEPTH SRC_NORMAL
 
             #include "UnityCG.cginc"
+            #include "Filter.cginc"
 
             struct appdata {
                 float4 vertex : POSITION;
@@ -30,6 +31,7 @@ Shader "Hidden/Differentiate" {
 
             sampler2D _MainTex;
             sampler2D _PatternTex;
+            sampler2D _CameraDepthNormalsTexture ;
 
             float4 _MainTex_TexelSize;
             
@@ -37,25 +39,43 @@ Shader "Hidden/Differentiate" {
             float4 _Params1;
             
             float4 frag_source (v2f i) : SV_Target {
+                float4 v = 0;
+
+                #if defined(SRC_DEPTH)
+                float4 cdepth = tex2D(_CameraDepthNormalsTexture , i.uv);
+                float depth;
+                float3 normal;
+                DecodeDepthNormal(cdepth, depth, normal);
+                v.x = 1 - depth; //Linear01Depth(depth);
+
+                #else
                 float4 cmain = tex2D(_MainTex, i.uv);
-                float v = cmain.x;
-                return float4(v, 0, 0, 0);
+                v.x = cmain.x;
+                #endif
+
+                return v;
             }
 
             float4 frag_diff (v2f i) : SV_Target {
                 float2 dmain = _MainTex_TexelSize.xy;
+                
+                float2 dx = 0;
+                #if defined(SRC_NORMAL)
+                float4 cdepth = tex2D(_CameraDepthNormalsTexture , i.uv);
+                float depth;
+                float3 normal;
+                DecodeDepthNormal(cdepth, depth, normal);
+                dx = normal.xy;
+                if (normal.z >= 0.999) dx = 0;
 
-                #if false
-                float v = cmain.x;
-                float2 dx = float2(ddx_fine(v), ddy_fine(v));
                 #else
-                float4 cmain = float4(
-                    tex2D(_MainTex, i.uv + float2(-dmain.x, 0)).x,
-                    tex2D(_MainTex, i.uv + float2(dmain.x, 0)).x,
-                    tex2D(_MainTex, i.uv + float2(0, -dmain.y)).x,
-                    tex2D(_MainTex, i.uv + float2(0, dmain.y)).x);
-                float2 dx = float2(cmain.y - cmain.x, cmain.w - cmain.z) * 0.5;
+                float4 dx_main, dy_main;
+                Sobel(_MainTex, dmain, i.uv, dx_main, dy_main);
+                dx = float2(dx_main.x, dy_main.x);
                 #endif
+                
+                dx *= _Params0.z;
+                dx = clamp(dx, -_Params0.w, _Params0.w);
 
                 float h = dot(max(-dx, 0), 1);
                 return float4(dx, h, 0);
@@ -67,9 +87,7 @@ Shader "Hidden/Differentiate" {
                 float4 cmain = tex2D(_MainTex, IN.uv);
                 float2 duv = cmain.xy * aspect_inv;
 
-                float4 cpattern = tex2D(_PatternTex, IN.uv + duv * _Params0.z);
-                //float c = pattern(IN.uv + duv * _Params0.z);
-                //float4 cpattern = float4(c,c,c,1);
+                float4 cpattern = tex2D(_PatternTex, IN.uv + duv);
                 return cpattern;
             }
         ENDCG
