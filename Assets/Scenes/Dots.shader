@@ -43,14 +43,11 @@ Shader "Hidden/Dots" {
                 if ((ip.y % 2) == 0) {
                     fp.x = frac(fp.x + 0.5);
                 }
-                float2 res_step = step(fp, _Params0.x);
-                float c = all(res_step) ? 1 : 0;
-
-                #else
-                float2 res_step = step(fp, _Params0.x);
-                float c = all(res_step) ? 1 : 0;
                 #endif
-
+                
+                float2 res_step = step(fp, _Params0.x);
+                bool c_flag = all(res_step) ^ (_Params0.z > 0);
+                float c = c_flag ? 0 : 1;
                 return float4(c, c, c, 1);
             }
             ENDCG

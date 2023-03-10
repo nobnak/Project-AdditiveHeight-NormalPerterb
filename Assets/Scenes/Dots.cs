@@ -47,10 +47,12 @@ public class Dots : MonoBehaviour {
                 if (tuner.shape != default)
                     mat.EnableKeyword(tuner.shape.ToString());
 
+                var dot_size_norm = (float)tuner.dot_size / tuner.tile_size;
+
                 mat.SetVector(P_Params0, new Vector4(
-                    math.min((float)tuner.dot_size / tuner.tile_size, tuner.tile_size),
+                    math.min(math.abs(dot_size_norm), tuner.tile_size),
                     tuner.tile_size,
-                    0f,
+                    math.sign(dot_size_norm),
                     0f));
 
                 dotsTex.Size = size;
